@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lobo de Máscara Branca - A Fuga das Sombras</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Orbitron:wght@500;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="960" height="540" tabindex="0"></canvas>
+
+    <!-- Overlay HUD em cima do Canvas para nitidez e responsividade -->
+    <div id="ui-overlay">
+      <!-- HUD Superior durante a gameplay -->
+      <div id="hud" class="hud-layer hidden">
+        <div class="hud-left">
+          <div class="character-portrait">
+            <div class="portrait-wolf"></div>
+            <div class="level-badge" id="hud-level-badge">FASE 1</div>
+          </div>
+          <div class="bars-container">
+            <!-- Barra de Vida -->
+            <div class="bar-wrapper health-bar-wrapper">
+              <span class="bar-label">VIDA</span>
+              <div class="bar-track">
+                <div id="health-fill" class="bar-fill health-fill" style="width: 100%;"></div>
+                <div id="health-ghost" class="bar-ghost health-ghost"></div>
+              </div>
+              <span id="health-text" class="bar-val">100/100</span>
+            </div>
+            <!-- Barra de Energia do Braço Biônico -->
+            <div class="bar-wrapper bionic-bar-wrapper">
+              <span class="bar-label">BIÔNICO</span>
+              <div class="bar-track">
+                <div id="bionic-fill" class="bar-fill bionic-fill" style="width: 100%;"></div>
+              </div>
+              <span id="bionic-text" class="bar-val">SOCO PRONTO</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud-center">
+          <div class="level-name" id="hud-level-name">As Ruínas do Santuário</div>
+          <div class="objective-banner" id="hud-objective">Elimine TODAS as gosmas para abrir o Portal!</div>
+        </div>
+
+        <div class="hud-right">
+          <div class="stat-box">
+            <span class="stat-icon">💀</span>
+            <span class="stat-value" id="hud-slimes-count">0</span>
+            <span class="stat-label" id="hud-slimes-label">RESTANTES</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-icon">⚡</span>
+            <span class="stat-value" id="hud-score">0</span>
+            <span class="stat-label">PONTOS</span>
+          </div>
+          <button id="btn-pause" class="hud-btn" title="Pausar (ESC)">⏸️</button>
+          <button id="btn-audio" class="hud-btn" title="Ligar/Desligar Som (M)">🔊</button>
+        </div>
+      </div>
+
+      <!-- Diálogos & Mensagens de História -->
+      <div id="dialog-box" class="dialog-box hidden">
+        <div class="dialog-portrait"></div>
+        <div class="dialog-content">
+          <div class="dialog-speaker" id="dialog-speaker">Lobo Mascarado</div>
+          <div class="dialog-text" id="dialog-text">...</div>
+          <div class="dialog-hint">Pressione [ESPAÇO] ou clique para continuar</div>
+        </div>
+      </div>
+
+      <!-- Menus do Jogo -->
+      <div id="screen-menu" class="screen-modal active">
+        <div class="title-glow"></div>
+        <div class="menu-content">
+          <div class="game-badge">AÇÃO & SOBREVIVÊNCIA</div>
+          <h1 class="main-title">
+            <span class="title-sub">O LOBO NEGRO DE</span>
+            <span class="title-main">MÁSCARA BRANCA</span>
+            <span class="title-highlight">A FUGA DAS GOSMAS NEGRAS</span>
+          </h1>
+          <p class="story-pitch">
+            As profundezas do Vazio foram corrompidas. Gosmas pretas engolem tudo o que tocam.
+            Empunhe seu <strong>Braço Biônico Cibernético</strong> e derrote a corrupção através de <strong>8 fases mortais</strong>!
+          </p>
+
+          <div class="menu-buttons">
+            <button id="btn-start" class="glow-button btn-primary">
+              <span class="btn-text">INICIAR JORNADA</span>
+              <span class="btn-sub">Começar da Fase 1</span>
+            </button>
+            <button id="btn-select-level" class="glow-button btn-secondary">
+              <span class="btn-text">SELECIONAR FASE</span>
+              <span class="btn-sub">8 Fases Progressivas</span>
+            </button>
+            <button id="btn-controls" class="glow-button btn-tertiary">
+              <span class="btn-text">COMO JOGAR & COMANDOS</span>
+              <span class="btn-sub">Habilidades do Braço Biônico</span>
+            </button>
+          </div>
+
+          <div class="menu-footer">
+            <span>Desenvolvido com carinho • 8 Níveis Desafiadores • Trilha Chiptune Sintetizada</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seleção de Fases -->
+      <div id="screen-levels" class="screen-modal hidden">
+        <div class="modal-box modal-wide">
+          <h2 class="modal-title">SELECIONE A FASE</h2>
+          <p class="modal-desc">Cada fase traz novos perigos, gosmas mutantes e maior velocidade da corrupção.</p>
+          <div class="level-grid" id="level-grid">
+            <!-- Gerado dinamicamente via JS -->
+          </div>
+          <div class="modal-actions">
+            <button id="btn-back-levels" class="glow-button btn-small">VOLTAR AO MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tela de Comandos / Como Jogar -->
+      <div id="screen-controls" class="screen-modal hidden">
+        <div class="modal-box modal-wide">
+          <h2 class="modal-title">HABILIDADES DO LOBO & BRAÇO BIÔNICO</h2>
+          <div class="controls-guide-grid">
+            <div class="guide-card">
+              <div class="guide-icon">🐺</div>
+              <div class="guide-title">Movimento Ágil</div>
+              <p><strong>A / D</strong> ou <strong>Setas Esquerda/Direita</strong>: Correr</p>
+              <p><strong>W / Espaço / Seta Cima</strong>: Pulo & Pulo Duplo</p>
+              <p><strong>Deslizar na Parede</strong>: Segure na direção da parede para frear e saltar nela!</p>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon">🔫</div>
+              <div class="guide-title">Tiro de Plasma (Longo Alcance)</div>
+              <p><strong>Clique Esquerdo</strong> ou <strong>Tecla I / U / V / X</strong></p>
+              <p>Dispara projéteis de plasma cibernético velozes que atravessam a tela inteira, destruindo gosmas pretas de longe com precisão!</p>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon">🥊</div>
+              <div class="guide-title">Soco Biônico (Combo)</div>
+              <p><strong>Tecla J</strong> ou <strong>Z</strong></p>
+              <p>Combo de 3 golpes devastadores de alta frequência. Destrói gosmas próximas e causa repulsão.</p>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon">🚀</div>
+              <div class="guide-title">Disparo de Braço / Gancho</div>
+              <p><strong>Tecla K</strong> ou <strong>Clique Direito</strong></p>
+              <p>Dispara o punho de titânio acoplado a um cabo. Esmaga gosmas distantes e puxa você a plataformas e paredes!</p>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon">⚡</div>
+              <div class="guide-title">Turbo Dash (Esquiva)</div>
+              <p><strong>Tecla L</strong> ou <strong>C</strong> ou <strong>Shift</strong></p>
+              <p>Propulsores a jato nas costas do braço impulsionam o lobo em alta velocidade com invulnerabilidade momentânea.</p>
+            </div>
+            <div class="guide-card highlight-card">
+              <div class="guide-icon">💥</div>
+              <div class="guide-title">Impacto Sísmico (Super EMP)</div>
+              <p><strong>Tecla E</strong> ou <strong>Q</strong> ou <strong>Tecla F</strong> (Quando barra cheia)</p>
+              <p>Golpe esmagador no chão que gera uma onda de choque desintegrando todas as gosmas pretas da área!</p>
+            </div>
+            <div class="guide-card danger-card">
+              <div class="guide-icon">☣️</div>
+              <div class="guide-title">As Gosmas Pretas</div>
+              <p>Gosmas normais, cuspidoras de veneno, aéreas, com armadura de espinhos, rápidas e a terrível Maré Negra!</p>
+              <p><strong>Fique longe de poças de piche!</strong></p>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button id="btn-back-controls" class="glow-button btn-small">ENTENDI, VAMOS JOGAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menu de Pausa -->
+      <div id="screen-pause" class="screen-modal hidden">
+        <div class="modal-box">
+          <h2 class="modal-title">JOGO PAUSADO</h2>
+          <div class="modal-buttons">
+            <button id="btn-resume" class="glow-button btn-primary">CONTINUAR</button>
+            <button id="btn-restart-level" class="glow-button btn-secondary">REINICIAR FASE</button>
+            <button id="btn-toggle-sound-pause" class="glow-button btn-secondary">SOM: LIGADO</button>
+            <button id="btn-quit-to-menu" class="glow-button btn-tertiary">SAIR PARA O MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vitória de Fase -->
+      <div id="screen-level-clear" class="screen-modal hidden">
+        <div class="modal-box">
+          <div class="clear-badge">FASE CONCLUÍDA!</div>
+          <h2 class="modal-title" id="clear-level-title">Fase 1 Superada</h2>
+          <div class="stats-summary">
+            <div class="summary-row">
+              <span>Gosmas Eliminadas:</span>
+              <strong id="clear-slimes">15</strong>
+            </div>
+            <div class="summary-row">
+              <span>Tempo de Fuga:</span>
+              <strong id="clear-time">01:24</strong>
+            </div>
+            <div class="summary-row">
+              <span>Bônus de Pontuação:</span>
+              <strong id="clear-score">+1200</strong>
+            </div>
+          </div>
+          <div class="modal-buttons">
+            <button id="btn-next-level" class="glow-button btn-primary">PRÓXIMA FASE ➔</button>
+            <button id="btn-replay-level" class="glow-button btn-secondary">REPETIR FASE</button>
+            <button id="btn-menu-from-clear" class="glow-button btn-tertiary">MENU PRINCIPAL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Over -->
+      <div id="screen-game-over" class="screen-modal hidden">
+        <div class="modal-box game-over-box">
+          <div class="death-icon">💀</div>
+          <h2 class="modal-title danger-text">CONSUMIDO PELAS SOMBRAS</h2>
+          <p class="modal-desc" id="game-over-reason">A gosma negra envolveu sua máscara e drenou sua energia vital...</p>
+          <div class="modal-buttons">
+            <button id="btn-retry" class="glow-button btn-primary">TENTAR NOVAMENTE</button>
+            <button id="btn-menu-from-death" class="glow-button btn-tertiary">VOLTAR AO MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vitória Final do Jogo (Fim da Fase 8) -->
+      <div id="screen-victory" class="screen-modal hidden">
+        <div class="modal-box modal-wide victory-box">
+          <div class="victory-stars">🏆 VITÓRIA SUPREMA 🏆</div>
+          <h2 class="modal-title victory-title">O SOBERANO DAS GOSMAS FOI DESTRUÍDO!</h2>
+          <div class="victory-narrative">
+            <p>Com um golpe devastador de seu Braço Biônico em potência máxima, o núcleo da Corrupção Negra racha e implode em um turbilhão de luz.</p>
+            <p>O <strong>Lobo de Máscara Branca</strong> ergue seu punho cibernético ao luar. As ruínas agora repousam em paz. Sua lenda ecoará pela eternidade!</p>
+          </div>
+          <div class="victory-final-stats" id="victory-final-stats">
+            <!-- Preenchido via JS -->
+          </div>
+          <div class="modal-actions">
+            <button id="btn-restart-game" class="glow-button btn-primary">JOGAR NOVAMENTE</button>
+            <button id="btn-menu-from-victory" class="glow-button btn-secondary">MENU PRINCIPAL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notificações Flutuantes -->
+      <div id="toast-container" class="toast-container"></div>
+
+      <!-- Controles Virtuais na Tela para Celular / Telas de Toque -->
+      <div id="touch-controls" class="touch-controls hidden">
+        <div class="touch-left">
+          <button id="t-left" class="t-btn t-dir">◀</button>
+          <button id="t-right" class="t-btn t-dir">▶</button>
+        </div>
+        <div class="touch-right">
+          <button id="t-jump" class="t-btn t-act t-jump" title="Pular">🦘</button>
+          <button id="t-punch" class="t-btn t-act t-punch" title="Soco">🥊</button>
+          <button id="t-rocket" class="t-btn t-act t-rocket" title="Braço Foguete">🚀</button>
+          <button id="t-dash" class="t-btn t-act t-dash" title="Dash">⚡</button>
+          <button id="t-slam" class="t-btn t-act t-slam" title="Impacto Sísmico">💥</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts do Jogo Modularizados -->
+  <script src="js/audio.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/enemies.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
